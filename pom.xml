@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.gatling.demo</groupId>
-  <artifactId>gatling-maven-plugin-demo-scala</artifactId>
+  <artifactId>gatling-fundamentals-api-scala</artifactId>
   <version>3.8.2</version>
 
   <properties>
