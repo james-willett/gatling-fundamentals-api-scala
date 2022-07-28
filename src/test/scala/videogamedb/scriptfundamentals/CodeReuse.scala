@@ -9,23 +9,28 @@ class CodeReuse extends Simulation {
     .acceptHeader("application/json")
 
   def getAllVideoGames() = {
-    exec(http("Get all video games")
-    .get("/videogame")
-    .check(status.is(200)))
+    repeat(3) {
+      exec(http("Get all video games")
+        .get("/videogame")
+        .check(status.is(200)))
+    }
   }
 
   def getSpecificGame() = {
-    exec(http("Get specific game")
-    .get("/videogame/1")
-    .check(status.in(200 to 210)))
+    repeat(5, "counter") {
+      exec(http("Get specific game with id: #{counter}")
+        .get("/videogame/#{counter}")
+        .check(status.in(200 to 210)))
+    }
   }
 
   val scn = scenario("Code resuse")
     .exec(getAllVideoGames())
     .pause(5)
     .exec(getSpecificGame())
-    .pause(5)
-    .exec(getAllVideoGames())
+    .repeat(2) {
+      getAllVideoGames()
+    }
 
   setUp(
     scn.inject(atOnceUsers(1))
