@@ -11,6 +11,7 @@ class ComplexCustomFeeder extends Simulation {
 
   val httpProtocol = http.baseUrl("https://videogamedb.uk/api")
     .acceptHeader("application/json")
+    .contentTypeHeader("application/json")
 
   var idNumbers = (1 to 10).iterator
   val rnd = new Random()
@@ -25,8 +26,6 @@ class ComplexCustomFeeder extends Simulation {
     startDate.minusDays(random.nextInt(30)).format(pattern)
   }
 
-  val scn = scenario("Complex Custom Feeder")
-
   val customFeeder = Iterator.continually(Map(
     "gameId" -> idNumbers.next(),
     "name" -> ("Game-" + randomString(5)),
@@ -35,6 +34,30 @@ class ComplexCustomFeeder extends Simulation {
     "category" -> ("Category-" + randomString(6)),
     "rating" -> ("Rating-" + randomString(4))
   ))
+
+  def authenticate() = {
+    exec(http("Authenticate")
+    .post("/authenticate")
+    .body(StringBody("{\n  \"password\": \"admin\",\n  \"username\": \"admin\"\n}"))
+    .check(jsonPath("$.token").saveAs("jwtToken")))
+  }
+
+  def createNewGame() = {
+    repeat(10) {
+      feed(customFeeder)
+        .exec(http("Create new game - #{name}")
+        .post("/videogame")
+        .header("authorization", "Bearer #{jwtToken}")
+        .body(ElFileBody("bodies/newGameTemplate.json")).asJson
+        .check(bodyString.saveAs("responseBody")))
+        .exec { session => println(session("responseBody").as[String]); session}
+        .pause(1)
+    }
+  }
+
+  val scn = scenario("Complex Custom Feeder")
+    .exec(authenticate())
+    .exec(createNewGame())
 
   setUp(
     scn.inject(atOnceUsers(1))
