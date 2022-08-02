@@ -8,6 +8,16 @@ class RuntimeParameters extends Simulation {
   val httpProtocol = http.baseUrl("https://videogamedb.uk/api")
     .acceptHeader("application/json")
 
+  def USERCOUNT = System.getProperty("USERS", "5").toInt
+  def RAMPDURATION = System.getProperty("RAMP_DURATION", "10").toInt
+  def TESTDURATION = System.getProperty("TEST_DURATION", "30").toInt
+
+  before {
+    println(s"Running test with ${USERCOUNT} users")
+    println(s"Ramping users over ${RAMPDURATION} seconds")
+    println(s"Total test duration: ${TESTDURATION} seconds")
+  }
+
   def getAllVideoGames() = {
     exec(
       http("Get all video games")
@@ -23,9 +33,9 @@ class RuntimeParameters extends Simulation {
   setUp(
     scn.inject(
       nothingFor(5),
-      rampUsers(10).during(20)
+      rampUsers(USERCOUNT).during(RAMPDURATION)
     )
   ).protocols(httpProtocol)
-    .maxDuration(20)
+    .maxDuration(TESTDURATION)
 
 }
