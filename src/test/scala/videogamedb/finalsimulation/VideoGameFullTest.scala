@@ -9,6 +9,20 @@ class VideoGameFullTest extends Simulation {
     .acceptHeader("application/json")
     .contentTypeHeader("application/json")
 
+  // ** VARIABLES FOR FEEDERS ** /
+  // runtime variables
+  def USERCOUNT = System.getProperty("USERS", "5").toInt
+  def RAMPDURATION = System.getProperty("RAMP_DURATION", "10").toInt
+  def TESTDURATION: Int = System.getProperty("TEST_DURATION", "30").toInt
+
+  val csvFeeder = csv("data/gameCsvFile.csv").random
+
+  before {
+    println(s"Running test with ${USERCOUNT} users")
+    println(s"Ramping users over ${RAMPDURATION} seconds")
+    println(s"Total test duration: ${TESTDURATION} seconds")
+  }
+
   /*** HTTP CALLS ***/
   def getAllVideoGames() = {
     exec(
@@ -18,30 +32,58 @@ class VideoGameFullTest extends Simulation {
     )
   }
 
-  // ** ADD OTHER HTTP CALLS ** /
+  def authenticate() = {
+    exec(http("Authenticate")
+    .post("/authenticate")
+    .body(StringBody("{\n  \"password\": \"admin\",\n  \"username\": \"admin\"\n}"))
+    .check(jsonPath("$.token").saveAs("jwtToken")))
+  }
+
+  def createNewGame() = {
+    feed(csvFeeder)
+      .exec(http("Create New Game - #{name}")
+      .post("/videogame")
+      .header("authorization", "Bearer #{jwtToken}")
+      .body(ElFileBody("bodies/newGameTemplate.json")).asJson)
+  }
+
+  def getSingleGame() = {
+    exec(http("Get single game - #{name}")
+    .get("/videogame/#{gameId}")
+    .check(jsonPath("$.name").is("#{name}")))
+  }
+
+  def deleteGame() = {
+    exec(http("Delete game - #{name}")
+    .delete("/videogame/#{gameId}")
+    .header("authorization", "Bearer #{jwtToken}")
+    .check(bodyString.is("Video game deleted")))
+  }
+
 
   /** SCENARIO DESIGN */
+  val scn = scenario("Video Game DB Final Script")
+    .forever {
+      exec(getAllVideoGames())
+        .pause(2)
+        .exec(authenticate())
+        .pause(2)
+        .exec(createNewGame())
+        .pause(2)
+        .exec(getSingleGame())
+        .pause(2)
+        .exec(deleteGame())
+    }
 
-  // using the http calls, create a scenario that does the following:
-  // 1. Get all games
-  // 2. Create new Game (remember to authenticate first!)
-  // 3. Get details of single game
-  // 4. Delete game
+  setUp(
+    scn.inject(
+      nothingFor(5),
+      rampUsers(USERCOUNT).during(RAMPDURATION)
+    ).protocols(httpProtocol)
+  ).maxDuration(TESTDURATION)
 
-  // ** SETUP LOAD SIMULATION
-
-  // create a simulation that has runtime parameters:
-  // 1. Users
-  // 2. Ramp up time
-  // 3. Test duration
-
-  // ** CUSTOM FEEDERS ** /
-
-  // feeder to generate the JSON for creating a new game
-
-  // ** VARIABLES FOR FEEDERS ** /
-
-  // ** BEFORE AND AFTER BLOCKS
-  // print out message at the start and end of the test
+  after {
+    println("Stress test completed")
+  }
 
 }
