@@ -1,0 +1,5 @@
+gameId,name,releaseDate,reviewScore,category,rating
+1,Resident Evil 4,2005-10-01 23:59:59,85,Shooter,Universal
+2,Gran Turismo 3,2001-03-10 23:59:59,91,Driving,Universal
+3,Tetris,1984-06-25 23:59:59,88,Puzzle,Universal
+4,Super Mario 64,1996-10-20 23:59:59,90,Platform,Universal
